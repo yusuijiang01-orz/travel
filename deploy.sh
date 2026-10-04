@@ -7,8 +7,8 @@ export DEBIAN_FRONTEND=noninteractive
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
 usage() {
-  printf '%s\n' 'Usage: sudo bash deploy.sh [--mode standalone|path] [--base-path /family-trip] [--port 3100] [--origin https://domain] [--domain domain]'
-  printf '%s\n' 'path starts only the app on loopback. Add proxy/nginx-family-trip.conf or proxy/caddy-family-trip.caddy to your existing TLS proxy.'
+  printf '%s\n' 'Usage: sudo bash deploy.sh [--mode standalone|path] [--base-path /family-trip] [--port 3100] [--origin https://domain] [--domain domain] [--auto-proxy]'
+  printf '%s\n' 'Auto proxy mode safely adds a managed route to one matching host Nginx/Caddy HTTPS vhost, validates, backs up, and reloads.'
 }
 if [[ ${1:-} == --help ]]; then usage; exit 0; fi
 if [[ $EUID -ne 0 ]]; then printf 'Run with sudo bash deploy.sh\n' >&2; exit 1; fi
@@ -33,6 +33,7 @@ if [[ -f .env ]]; then
 fi
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --auto-proxy) AUTO_PROXY=1; shift;;
     --mode|--base-path|--port|--origin|--domain)
       if [[ $# -lt 2 ]]; then usage >&2; exit 1; fi
       case "$1" in
@@ -44,6 +45,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 DEPLOY_MODE=${DEPLOY_MODE:-standalone}
+AUTO_PROXY=${AUTO_PROXY:-0}
 TRAVEL_DOMAIN=${TRAVEL_DOMAIN:-travel.lovenom.eu.org}
 APP_PORT=${APP_PORT:-3100}
 case "$DEPLOY_MODE" in
@@ -78,7 +80,7 @@ if [[ "$DEPLOY_MODE" == standalone ]]; then
 fi
 
 apt-get update -qq
-apt-get install -y --no-install-recommends ca-certificates curl iproute2
+apt-get install -y --no-install-recommends ca-certificates curl iproute2 python3
 if [[ "$DEPLOY_MODE" == standalone ]]; then
   apt-get install -y --no-install-recommends dnsutils python3
   host_ipv4=$(curl -4 --fail --silent --show-error --max-time 15 https://api.ipify.org)
@@ -103,6 +105,24 @@ if [[ "$DEPLOY_MODE" == standalone ]]; then
   printf 'DNS verified: %s -> %s\nInbound TCP 80/443 must be open in provider and OS firewalls.\n' "$TRAVEL_DOMAIN" "$host_ipv4"
 else
   printf 'Path mode: existing proxy keeps DNS/TLS and ports 80/443. This app will bind only 127.0.0.1:%s.\n' "$APP_PORT"
+  if [[ "$AUTO_PROXY" == 1 ]]; then
+    if ! command -v systemctl >/dev/null; then printf 'Automatic proxy setup requires systemd. No proxy config was changed.\n' >&2; exit 1; fi
+    nginx_active=0; caddy_active=0
+    systemctl is-active --quiet nginx && nginx_active=1 || true
+    systemctl is-active --quiet caddy && caddy_active=1 || true
+    if (( nginx_active + caddy_active != 1 )); then
+      if [[ -n "$(ss -H -ltn 'sport = :80 or sport = :443')" ]]; then
+        printf 'Ports 80/443 are occupied, but exactly one supported host Nginx or Caddy service is not active. No proxy was changed.\n' >&2
+      else
+        printf 'No active host Nginx/Caddy HTTPS proxy found. No proxy was changed.\n' >&2
+      fi
+      printf 'Diagnosis: sudo bash /opt/family-travel/diagnose-vps.sh\n' >&2; exit 1
+    fi
+    if [[ "$nginx_active" == 1 ]]; then AUTO_PROXY_KIND=nginx; command -v nginx >/dev/null || { echo 'Nginx service is active but its command is missing.' >&2; exit 1; }
+    else AUTO_PROXY_KIND=caddy; command -v caddy >/dev/null || { echo 'Caddy service is active but its command is missing.' >&2; exit 1; }
+    fi
+    export AUTO_PROXY_KIND
+  fi
 fi
 
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
@@ -151,9 +171,17 @@ mv -- "$temp_env" .env
 if [[ "$DEPLOY_MODE" == path ]]; then
   curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:$APP_PORT$BASE_PATH/api/health" >/dev/null
   printf '\nApp ready on loopback: http://127.0.0.1:%s%s/\n' "$APP_PORT" "$BASE_PATH"
-  printf 'Public target: %s%s/ (existing proxy configuration still required).\n' "$PUBLIC_ORIGIN" "$BASE_PATH"
-  printf 'Add proxy/nginx-family-trip.conf or proxy/caddy-family-trip.caddy to your existing HTTPS site, matching path and port.\n'
-  printf 'No proxy config was changed, no certificates were requested, and no existing service was stopped.\n'
+  if [[ "$AUTO_PROXY" == 1 ]]; then
+    python3 configure-proxy.py "$AUTO_PROXY_KIND" "$TRAVEL_DOMAIN" "$APP_PORT" "$BASE_PATH"
+    if curl --fail --silent --show-error --max-time 15 "$PUBLIC_ORIGIN$BASE_PATH/api/health" >/dev/null; then
+      printf 'Public HTTPS health check passed: %s%s/\nVotes remain in Docker volume family-travel_votes.\n' "$PUBLIC_ORIGIN" "$BASE_PATH"
+    else
+      printf 'The app and proxy config are active, but the public HTTPS health check failed.\nDiagnosis: sudo bash /opt/family-travel/diagnose-vps.sh\n' >&2; exit 1
+    fi
+  else
+    printf 'Public target: %s%s/ (proxy setup still required).\n' "$PUBLIC_ORIGIN" "$BASE_PATH"
+    printf 'No proxy config was changed, no certificates were requested, and no existing service was stopped.\n'
+  fi
   exit 0
 fi
 printf 'Containers started. Waiting for automatic HTTPS issuance...\n'

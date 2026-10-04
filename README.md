@@ -24,21 +24,21 @@ npm start
 
 ## 现有代理上的 /family-trip 部署
 
-**容器显示 healthy、脚本显示 `App ready on loopback`，只证明 VPS 本机应用正常。公网仍需在现有反向代理中添加下面的 `/family-trip/` 规则；未添加时，浏览器会收到主站原有响应或 404。此模式不会自动修改现有公网代理。**
-
-如果 VPS 已有站点占用 80/443，使用这一模式。把整个项目上传到 VPS，在项目目录运行：
+如果 VPS 已有站点占用 80/443，复制下面**一行**到 VPS 终端运行。脚本会从公开 GitHub 仓库拉取最新版本到 `/opt/family-travel`，构建并启动仅绑定 `127.0.0.1:3100` 的应用，然后尝试将 `/family-trip/` 规则安全加入宿主机上唯一运行的 Nginx 或 Caddy HTTPS 站点：
 
 ```bash
-sudo bash deploy.sh --mode path --base-path /family-trip --port 3100 --origin https://travel.lovenom.eu.org
+curl -fsSL https://raw.githubusercontent.com/yusuijiang01-orz/travel/main/deploy-vps.sh | sudo bash
 ```
 
-`--origin` 填现有 HTTPS 站点的域名来源，**不带 `/family-trip`**；`--port` 选一个未占用的高位端口。也可复制 `.env.path.example` 为 `.env` 填好参数，再运行 `sudo bash deploy.sh`。此模式仅启动 `compose.path.yaml` 中的 app，通过 Docker 发布在 **`127.0.0.1:3100`**，不会启动本项目的 Caddy、申请新证书、占用 80/443、修改已有代理配置或停止其他服务。公网地址为 `https://travel.lovenom.eu.org/family-trip/`。
+自动代理修改只支持**宿主机直接运行的单一 Nginx 或 Caddy**，并要求现有配置中恰好有一个 `travel.lovenom.eu.org` HTTPS vhost。脚本只在该 vhost 加入带标记的 include/import，先备份原文件，再运行 Nginx/Caddy 配置校验，校验通过才 reload；重复运行会识别已管理的规则。不会覆盖代理主配置、停止现有服务、改防火墙或开放 3100 公网。已有投票卷 `family-travel_votes` 会保留。
+
+如果代理在 Docker 容器中、存在多个匹配站点、找不到匹配域名、代理类型不支持或配置校验失败，脚本会停止并打印一条只读诊断命令。它不会猜测要改哪个 vhost。脚本成功后还会请求 `https://travel.lovenom.eu.org/family-trip/api/health` 做公网健康检查。若只看到本机 app healthy，不代表公网代理已完成。
 
 HTTPS 和证书续期继续由现有 Nginx/Caddy 处理，浏览器对页面和投票接口仍使用 HTTPS。现有代理把 `/family-trip` 和 `/family-trip/` 请求发到本机 `http://127.0.0.1:3100`，**保留 `/family-trip` 前缀**；主站其他路径继续使用原配置。应用会把 `/family-trip` 重定向到 `/family-trip/`，页面资源、模块导入、图片标志和投票 API 都跟随 `BASE_PATH`。
 
-将 [proxy/nginx-family-trip.conf](proxy/nginx-family-trip.conf) 中的两个 `location` 放进现有 HTTPS `server {}` 内，或将 [proxy/caddy-family-trip.caddy](proxy/caddy-family-trip.caddy) 中的匹配块放进现有域名块。它们默认端口 3100、路径 `/family-trip`，修改参数时同步改片段。Nginx 的 `proxy_pass` **不要添加末尾斜杠**；Caddy 用 `handle`，**不要改成会剥掉前缀的 `handle_path`**。
+自动集成使用的规则默认端口 3100、路径 `/family-trip`，保留路径前缀。Nginx 使用不带 URI 的 `proxy_pass`；Caddy 使用 `handle` 和 `reverse_proxy`。
 
-保存代理配置后，先使用对应代理自己的配置校验，再只 reload 该代理，例如 `nginx -t` 后 `systemctl reload nginx`，或 `caddy validate --config /etc/caddy/Caddyfile` 后 `systemctl reload caddy`。这些步骤由实际部署操作者执行，本次未运行。脚本仅确认本机 app 健康；加好代理并能公开访问之前，不会声称公网部署完成。
+若一键脚本因不支持的代理环境停止，可用输出中的只读诊断命令收集状态，再依据下方片段决定后续接入方式。
 
 这两个片段适用于**与 Docker 在同一 VPS、直接运行于宿主机的现有代理**。如果现有代理也在容器里，其 `127.0.0.1` 指向代理容器自身，需要接入私有 Docker 网络并改用 app 服务地址；不要为此把 3100 开到公网，也不要把现有代理直接替换成本项目 Caddy。
 
@@ -115,6 +115,9 @@ Caddyfile               自动 HTTPS、压缩与反向代理
 proxy/nginx-family-trip.conf   添加到现有 Nginx HTTPS 站点的 /family-trip 片段
 proxy/caddy-family-trip.caddy  添加到现有 Caddy 域名块的 /family-trip 片段
 deploy.sh               DNS/端口前置检查和 VPS 一键部署
+deploy-vps.sh           从 GitHub 自助拉取并启动的一行式 VPS 入口
+configure-proxy.py      Nginx/Caddy 子路径自动接入、备份与校验
+diagnose-vps.sh         不显示凭据的只读 VPS 诊断
 ```
 
 ## 内容边界
@@ -125,4 +128,4 @@ deploy.sh               DNS/端口前置检查和 VPS 一键部署
 
 ## 交付状态
 
-本次子路径适配未运行测试、构建、浏览器验收、代理配置校验或实际 VPS 部署；尚未确认 `/family-trip/` 公网访问。出发前请按页面提示核实当天开放、路线与设施。部署脚本中的健康确认只在实际执行脚本时运行。
+本次一键部署流程未运行测试、构建、代理配置校验或实际 VPS 部署；尚未确认 `/family-trip/` 公网访问。出发前请按页面提示核实当天开放、路线与设施。
