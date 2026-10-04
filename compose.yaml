@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       HOST: 0.0.0.0
+      BASE_PATH: ${BASE_PATH:-}
       PUBLIC_ORIGIN: https://${TRAVEL_DOMAIN:-travel.lovenom.eu.org}
       TRUST_PROXY: '1'
       DATA_DIR: /app/data
@@ -17,7 +18,7 @@ services:
       - no-new-privileges:true
     cap_drop: [ALL]
     healthcheck:
-      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000'+(process.env.BASE_PATH||'')+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3

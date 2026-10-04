@@ -6,7 +6,16 @@ import { PublicError, getResults, submitBallot, validateBallot } from './lib/bal
 
 const root = fileURLToPath(new URL('./public/', import.meta.url));
 const port = Number(process.env.PORT || 3000);
-const allowedOrigin = process.env.PUBLIC_ORIGIN || `http://localhost:${port}`;
+const basePath = (process.env.BASE_PATH || '').replace(/\/+$/, '');
+if (basePath && !/^\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+$/.test(basePath)) {
+  throw new Error('BASE_PATH must be empty or a path such as /test.');
+}
+const originUrl = new URL(process.env.PUBLIC_ORIGIN || `http://localhost:${port}`);
+if (!['http:', 'https:'].includes(originUrl.protocol) || originUrl.username || originUrl.password ||
+    originUrl.pathname !== '/' || originUrl.search || originUrl.hash) {
+  throw new Error('PUBLIC_ORIGIN must contain only the public scheme and host; put the path in BASE_PATH.');
+}
+const allowedOrigin = originUrl.origin;
 const rates = new Map();
 const files = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
@@ -28,7 +37,7 @@ function json(response, status, body, extra = {}) {
 }
 
 function rateLimit(request, write) {
-  // TRUST_PROXY is enabled only with the app port private behind the bundled Caddy.
+  // Enable TRUST_PROXY only behind the private network or loopback proxy binding.
   const address = process.env.TRUST_PROXY === '1'
     ? String(request.headers['x-forwarded-for'] || request.socket.remoteAddress).split(',').at(-1).trim()
     : request.socket.remoteAddress;
@@ -62,7 +71,18 @@ async function body(request) {
 
 const server = createServer(async (request, response) => {
   try {
-    const pathname = new URL(request.url, allowedOrigin).pathname;
+    const url = new URL(request.url, allowedOrigin);
+    if (basePath && url.pathname === basePath) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return json(response, 405, { error: '请使用带斜杠的页面地址。' }, { Allow: 'GET, HEAD' });
+      }
+      response.writeHead(308, { ...securityHeaders, Location: `${basePath}/${url.search}`, 'Cache-Control': 'no-cache' });
+      return response.end();
+    }
+    if (basePath && !url.pathname.startsWith(`${basePath}/`)) {
+      return json(response, 404, { error: '页面未找到。' });
+    }
+    const pathname = basePath ? url.pathname.slice(basePath.length) : url.pathname;
     if (pathname.startsWith('/api/')) {
       rateLimit(request, request.method === 'POST');
       if (pathname === '/api/health' && request.method === 'GET') {
@@ -84,7 +104,9 @@ const server = createServer(async (request, response) => {
     }
     const file = files.get(pathname);
     if (!file) return json(response, 404, { error: '页面未找到。' });
-    const content = await readFile(resolve(root, file[0]));
+    const saved = await readFile(resolve(root, file[0]));
+    const content = file[0] === 'index.html'
+      ? Buffer.from(saved.toString('utf8').replaceAll('__BASE_PATH__', basePath)) : saved;
     response.writeHead(200, { ...securityHeaders, 'Content-Type': file[1],
       'Content-Length': content.length, 'Cache-Control': 'no-cache' });
     response.end(request.method === 'HEAD' ? undefined : content);
@@ -99,7 +121,7 @@ const server = createServer(async (request, response) => {
 server.requestTimeout = 10000;
 server.headersTimeout = 10000;
 server.maxHeadersCount = 40;
-server.listen(port, process.env.HOST || '127.0.0.1', () => console.log(`Travel guide: ${allowedOrigin}`));
+server.listen(port, process.env.HOST || '127.0.0.1', () => console.log(`Travel guide: ${allowedOrigin}${basePath}/`));
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 12000).unref();

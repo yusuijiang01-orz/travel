@@ -1,0 +1,33 @@
+# Existing proxy /test deployment. No Caddy and no public high port.
+name: family-travel-path
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${APP_PORT:-3100}:3000
+    environment:
+      HOST: 0.0.0.0
+      BASE_PATH: ${BASE_PATH:-/test}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://travel.lovenom.eu.org}
+      TRUST_PROXY: '1'
+      DATA_DIR: /app/data
+    volumes:
+      - votes:/app/data
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000'+(process.env.BASE_PATH||'')+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+volumes:
+  votes:
+    # Reuse the original standalone deployment's durable votes.
+    name: family-travel_votes
