@@ -1,0 +1,9 @@
+{
+  "name": "yongding-family-travel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "从湖雷出发的永定家庭旅行手册",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.mjs" }
+}
