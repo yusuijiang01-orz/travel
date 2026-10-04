@@ -22,25 +22,27 @@ npm start
 
 只有网页使用的地址与 `PUBLIC_ORIGIN` 一致时才允许浏览器提交投票。必要时在系统防火墙放行此局域网端口。不要把开发服务器直接作为公网服务。
 
-## 现有代理上的 /test 部署
+## 现有代理上的 /family-trip 部署
+
+**容器显示 healthy、脚本显示 `App ready on loopback`，只证明 VPS 本机应用正常。公网仍需在现有反向代理中添加下面的 `/family-trip/` 规则；未添加时，浏览器会收到主站原有响应或 404。此模式不会自动修改现有公网代理。**
 
 如果 VPS 已有站点占用 80/443，使用这一模式。把整个项目上传到 VPS，在项目目录运行：
 
 ```bash
-sudo bash deploy.sh --mode path --base-path /test --port 3100 --origin https://travel.lovenom.eu.org
+sudo bash deploy.sh --mode path --base-path /family-trip --port 3100 --origin https://travel.lovenom.eu.org
 ```
 
-`--origin` 填现有 HTTPS 站点的域名来源，**不带 `/test`**；`--port` 选一个未占用的高位端口。也可复制 `.env.path.example` 为 `.env` 填好参数，再运行 `sudo bash deploy.sh`。此模式仅启动 `compose.path.yaml` 中的 app，通过 Docker 发布在 **`127.0.0.1:3100`**，不会启动本项目的 Caddy、申请新证书、占用 80/443、修改已有代理配置或停止其他服务。公网地址为 `https://travel.lovenom.eu.org/test/`。
+`--origin` 填现有 HTTPS 站点的域名来源，**不带 `/family-trip`**；`--port` 选一个未占用的高位端口。也可复制 `.env.path.example` 为 `.env` 填好参数，再运行 `sudo bash deploy.sh`。此模式仅启动 `compose.path.yaml` 中的 app，通过 Docker 发布在 **`127.0.0.1:3100`**，不会启动本项目的 Caddy、申请新证书、占用 80/443、修改已有代理配置或停止其他服务。公网地址为 `https://travel.lovenom.eu.org/family-trip/`。
 
-HTTPS 和证书续期继续由现有 Nginx/Caddy 处理，浏览器对页面和投票接口仍使用 HTTPS。现有代理把 `/test` 和 `/test/` 请求发到本机 `http://127.0.0.1:3100`，**保留 `/test` 前缀**；主站其他路径继续使用原配置。应用会把 `/test` 重定向到 `/test/`，页面资源、模块导入、图片标志和投票 API 都跟随 `BASE_PATH`。
+HTTPS 和证书续期继续由现有 Nginx/Caddy 处理，浏览器对页面和投票接口仍使用 HTTPS。现有代理把 `/family-trip` 和 `/family-trip/` 请求发到本机 `http://127.0.0.1:3100`，**保留 `/family-trip` 前缀**；主站其他路径继续使用原配置。应用会把 `/family-trip` 重定向到 `/family-trip/`，页面资源、模块导入、图片标志和投票 API 都跟随 `BASE_PATH`。
 
-将 [proxy/nginx-test.conf](proxy/nginx-test.conf) 中的两个 `location` 放进现有 HTTPS `server {}` 内，或将 [proxy/caddy-test.caddy](proxy/caddy-test.caddy) 中的匹配块放进现有域名块。它们默认端口 3100、路径 `/test`，修改参数时同步改片段。Nginx 的 `proxy_pass` **不要添加末尾斜杠**；Caddy 用 `handle`，**不要改成会剥掉前缀的 `handle_path`**。
+将 [proxy/nginx-family-trip.conf](proxy/nginx-family-trip.conf) 中的两个 `location` 放进现有 HTTPS `server {}` 内，或将 [proxy/caddy-family-trip.caddy](proxy/caddy-family-trip.caddy) 中的匹配块放进现有域名块。它们默认端口 3100、路径 `/family-trip`，修改参数时同步改片段。Nginx 的 `proxy_pass` **不要添加末尾斜杠**；Caddy 用 `handle`，**不要改成会剥掉前缀的 `handle_path`**。
 
 保存代理配置后，先使用对应代理自己的配置校验，再只 reload 该代理，例如 `nginx -t` 后 `systemctl reload nginx`，或 `caddy validate --config /etc/caddy/Caddyfile` 后 `systemctl reload caddy`。这些步骤由实际部署操作者执行，本次未运行。脚本仅确认本机 app 健康；加好代理并能公开访问之前，不会声称公网部署完成。
 
 这两个片段适用于**与 Docker 在同一 VPS、直接运行于宿主机的现有代理**。如果现有代理也在容器里，其 `127.0.0.1` 指向代理容器自身，需要接入私有 Docker 网络并改用 app 服务地址；不要为此把 3100 开到公网，也不要把现有代理直接替换成本项目 Caddy。
 
-更新此模式时继续用同一部署命令，查看日志/停止 app 必须选对 Compose 文件：
+默认路径是 `/family-trip`，仍可用 `--base-path` 改成其他路径。已有 `.env` 中的 `BASE_PATH` 会继续生效：从旧路径迁移时，请使用上面的显式 `--base-path /family-trip` 命令，并同步更新现有代理规则。更新此模式时继续用同一部署命令，查看日志/停止 app 必须选对 Compose 文件：
 
 ```bash
 docker compose -f compose.path.yaml ps
@@ -85,7 +87,7 @@ docker compose logs --tail=80 caddy app
 - 页面按 5 位成人参与解释结果；这是公开的家庭讨论票，没有登录或邀请口令，无法证明投票者身份，也不会硬性限制为 5 人。超过 5 人时页面显示说明。
 - localStorage 仅记住该浏览器的表单昵称；共享票数始终来自服务端，不使用浏览器存储充当数据库。
 
-`GET /api/results` 返回汇总；`POST /api/votes` 接收 JSON；`GET /api/health` 检查存储能否读取。子路径模式下分别是 `/test/api/results`、`/test/api/votes`、`/test/api/health`。请求体上限 2 KB，同 IP 每分钟最多 8 次提交和 90 次 API 读取；错误只返回安全提示，服务器不回传堆栈和文件路径。
+`GET /api/results` 返回汇总；`POST /api/votes` 接收 JSON；`GET /api/health` 检查存储能否读取。子路径模式下分别是 `/family-trip/api/results`、`/family-trip/api/votes`、`/family-trip/api/health`。请求体上限 2 KB，同 IP 每分钟最多 8 次提交和 90 次 API 读取；错误只返回安全提示，服务器不回传堆栈和文件路径。
 
 持久化采用进程内写队列、文件系统目录锁、同目录临时文件 `fsync`、原子 rename；Linux 同步目录元数据。锁在中断后 30 秒恢复；读到损坏数据会报错并保留原文件，不覆盖重置。部署固定为**一个 app 实例**，适合这个小规模投票；多实例、共享网络磁盘或大流量场景应迁移到真正的数据库锁/事务。
 
@@ -110,8 +112,8 @@ Dockerfile              非 root Node 容器
 compose.yaml            私有 app + 公网 Caddy + 持久卷
 compose.path.yaml       现有代理模式，仅 loopback 高位端口 app
 Caddyfile               自动 HTTPS、压缩与反向代理
-proxy/nginx-test.conf   添加到现有 Nginx HTTPS 站点的 /test 片段
-proxy/caddy-test.caddy  添加到现有 Caddy 域名块的 /test 片段
+proxy/nginx-family-trip.conf   添加到现有 Nginx HTTPS 站点的 /family-trip 片段
+proxy/caddy-family-trip.caddy  添加到现有 Caddy 域名块的 /family-trip 片段
 deploy.sh               DNS/端口前置检查和 VPS 一键部署
 ```
 
@@ -123,4 +125,4 @@ deploy.sh               DNS/端口前置检查和 VPS 一键部署
 
 ## 交付状态
 
-本次子路径适配未运行测试、构建、浏览器验收、代理配置校验或实际 VPS 部署；尚未确认 `/test/` 公网访问。出发前请按页面提示核实当天开放、路线与设施。部署脚本中的健康确认只在实际执行脚本时运行。
+本次子路径适配未运行测试、构建、浏览器验收、代理配置校验或实际 VPS 部署；尚未确认 `/family-trip/` 公网访问。出发前请按页面提示核实当天开放、路线与设施。部署脚本中的健康确认只在实际执行脚本时运行。

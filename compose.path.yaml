@@ -1,4 +1,4 @@
-# Existing proxy /test deployment. No Caddy and no public high port.
+# Existing proxy /family-trip deployment. No Caddy and no public high port.
 name: family-travel-path
 services:
   app:
@@ -8,7 +8,7 @@ services:
       - 127.0.0.1:${APP_PORT:-3100}:3000
     environment:
       HOST: 0.0.0.0
-      BASE_PATH: ${BASE_PATH:-/test}
+      BASE_PATH: ${BASE_PATH:-/family-trip}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://travel.lovenom.eu.org}
       TRUST_PROXY: '1'
       DATA_DIR: /app/data

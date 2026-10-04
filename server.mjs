@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('./public/', import.meta.url));
 const port = Number(process.env.PORT || 3000);
 const basePath = (process.env.BASE_PATH || '').replace(/\/+$/, '');
 if (basePath && !/^\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+$/.test(basePath)) {
-  throw new Error('BASE_PATH must be empty or a path such as /test.');
+  throw new Error('BASE_PATH must be empty or a path such as /family-trip.');
 }
 const originUrl = new URL(process.env.PUBLIC_ORIGIN || `http://localhost:${port}`);
 if (!['http:', 'https:'].includes(originUrl.protocol) || originUrl.username || originUrl.password ||

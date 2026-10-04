@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Standalone: sudo bash deploy.sh
-# Existing proxy: sudo bash deploy.sh --mode path --base-path /test --port 3100
+# Existing proxy: sudo bash deploy.sh --mode path --base-path /family-trip --port 3100
 set -Eeuo pipefail
 trap 'printf "Deployment stopped at line %s. Fix the reported cause and rerun.\n" "$LINENO" >&2' ERR
 export DEBIAN_FRONTEND=noninteractive
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
 usage() {
-  printf '%s\n' 'Usage: sudo bash deploy.sh [--mode standalone|path] [--base-path /test] [--port 3100] [--origin https://domain] [--domain domain]'
-  printf '%s\n' 'path starts only the app on loopback. Add proxy/nginx-test.conf or proxy/caddy-test.caddy to your existing TLS proxy.'
+  printf '%s\n' 'Usage: sudo bash deploy.sh [--mode standalone|path] [--base-path /family-trip] [--port 3100] [--origin https://domain] [--domain domain]'
+  printf '%s\n' 'path starts only the app on loopback. Add proxy/nginx-family-trip.conf or proxy/caddy-family-trip.caddy to your existing TLS proxy.'
 }
 if [[ ${1:-} == --help ]]; then usage; exit 0; fi
 if [[ $EUID -ne 0 ]]; then printf 'Run with sudo bash deploy.sh\n' >&2; exit 1; fi
@@ -48,7 +48,7 @@ TRAVEL_DOMAIN=${TRAVEL_DOMAIN:-travel.lovenom.eu.org}
 APP_PORT=${APP_PORT:-3100}
 case "$DEPLOY_MODE" in
   standalone) BASE_PATH=${BASE_PATH:-};;
-  path) BASE_PATH=${BASE_PATH:-/test};;
+  path) BASE_PATH=${BASE_PATH:-/family-trip};;
   *) printf 'Mode must be standalone or path.\n' >&2; exit 1;;
 esac
 BASE_PATH=${BASE_PATH%/}
@@ -56,7 +56,7 @@ if [[ ! "$TRAVEL_DOMAIN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ || "$TRAVEL_DOMAIN"
   printf 'Invalid domain. Use a plain hostname.\n' >&2; exit 1
 fi
 if [[ -n "$BASE_PATH" && ! "$BASE_PATH" =~ ^/([A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+$ ]]; then
-  printf 'BASE_PATH must be empty or a path such as /test.\n' >&2; exit 1
+  printf 'BASE_PATH must be empty or a path such as /family-trip.\n' >&2; exit 1
 fi
 if [[ "$DEPLOY_MODE" == path && -z "$BASE_PATH" ]]; then printf 'Path mode requires a nonempty path.\n' >&2; exit 1; fi
 if [[ ! "$APP_PORT" =~ ^[1-9][0-9]{3,4}$ ]] || (( APP_PORT < 1024 || APP_PORT > 65535 )); then
@@ -65,7 +65,7 @@ fi
 PUBLIC_ORIGIN=${PUBLIC_ORIGIN:-https://$TRAVEL_DOMAIN}
 PUBLIC_ORIGIN=${PUBLIC_ORIGIN%/}
 if [[ ! "$PUBLIC_ORIGIN" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$ ]]; then
-  printf 'PUBLIC_ORIGIN must be the existing public origin, for example https://travel.lovenom.eu.org, without /test.\n' >&2; exit 1
+  printf 'PUBLIC_ORIGIN must be the existing public origin, for example https://travel.lovenom.eu.org, without /family-trip.\n' >&2; exit 1
 fi
 if [[ "$DEPLOY_MODE" == standalone ]]; then
   PUBLIC_ORIGIN=https://$TRAVEL_DOMAIN
@@ -152,7 +152,7 @@ if [[ "$DEPLOY_MODE" == path ]]; then
   curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:$APP_PORT$BASE_PATH/api/health" >/dev/null
   printf '\nApp ready on loopback: http://127.0.0.1:%s%s/\n' "$APP_PORT" "$BASE_PATH"
   printf 'Public target: %s%s/ (existing proxy configuration still required).\n' "$PUBLIC_ORIGIN" "$BASE_PATH"
-  printf 'Add proxy/nginx-test.conf or proxy/caddy-test.caddy to your existing HTTPS site, matching path and port.\n'
+  printf 'Add proxy/nginx-family-trip.conf or proxy/caddy-family-trip.caddy to your existing HTTPS site, matching path and port.\n'
   printf 'No proxy config was changed, no certificates were requested, and no existing service was stopped.\n'
   exit 0
 fi
