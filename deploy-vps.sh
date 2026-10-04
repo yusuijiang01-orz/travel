@@ -30,4 +30,16 @@ else
 fi
 
 cd "$project_dir"
-exec bash deploy.sh --mode path --base-path /family-trip --port 3100 --origin https://travel.lovenom.eu.org --auto-proxy
+deployment_failed() {
+  local status=$?
+  trap - ERR
+  printf '\nDeployment failed (exit %s). Read-only VPS diagnosis follows:\n' "$status" >&2
+  if [[ -f "$project_dir/diagnose-vps.sh" ]]; then
+    bash "$project_dir/diagnose-vps.sh" || true
+  else
+    echo 'Diagnosis script is missing from the pulled project.' >&2
+  fi
+  exit "$status"
+}
+trap deployment_failed ERR
+bash deploy.sh --mode path --base-path /family-trip --port 3100 --origin https://travel.lovenom.eu.org --auto-proxy

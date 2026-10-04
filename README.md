@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/yusuijiang01-orz/travel/main/deploy
 
 自动代理修改只支持**宿主机直接运行的单一 Nginx 或 Caddy**，并要求现有配置中恰好有一个 `travel.lovenom.eu.org` HTTPS vhost。脚本只在该 vhost 加入带标记的 include/import，先备份原文件，再运行 Nginx/Caddy 配置校验，校验通过才 reload；重复运行会识别已管理的规则。不会覆盖代理主配置、停止现有服务、改防火墙或开放 3100 公网。已有投票卷 `family-travel_votes` 会保留。
 
-如果代理在 Docker 容器中、存在多个匹配站点、找不到匹配域名、代理类型不支持或配置校验失败，脚本会停止并打印一条只读诊断命令。它不会猜测要改哪个 vhost。脚本成功后还会请求 `https://travel.lovenom.eu.org/family-trip/api/health` 做公网健康检查。若只看到本机 app healthy，不代表公网代理已完成。
+如果代理在 Docker 容器中、存在多个匹配站点、找不到匹配域名、代理类型不支持或配置校验失败，脚本会停止并自动打印只读诊断结果；无需再手动运行诊断命令。它不会猜测要改哪个 vhost。脚本成功后还会请求 `https://travel.lovenom.eu.org/family-trip/api/health` 做公网健康检查。若只看到本机 app healthy，不代表公网代理已完成。
 
 HTTPS 和证书续期继续由现有 Nginx/Caddy 处理，浏览器对页面和投票接口仍使用 HTTPS。现有代理把 `/family-trip` 和 `/family-trip/` 请求发到本机 `http://127.0.0.1:3100`，**保留 `/family-trip` 前缀**；主站其他路径继续使用原配置。应用会把 `/family-trip` 重定向到 `/family-trip/`，页面资源、模块导入、图片标志和投票 API 都跟随 `BASE_PATH`。
 
