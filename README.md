@@ -30,7 +30,9 @@ npm start
 curl -fsSL https://raw.githubusercontent.com/yusuijiang01-orz/travel/main/deploy-vps.sh | sudo bash
 ```
 
-自动代理修改只支持**宿主机直接运行的单一 Nginx 或 Caddy**，并要求现有配置中恰好有一个 `travel.lovenom.eu.org` HTTPS vhost。脚本只在该 vhost 加入带标记的 include/import，先备份原文件，再运行 Nginx/Caddy 配置校验，校验通过才 reload；重复运行会识别已管理的规则。不会覆盖代理主配置、停止现有服务、改防火墙或开放 3100 公网。已有投票卷 `family-travel_votes` 会保留。
+自动代理修改支持**宿主机直接运行的单一 Nginx 或 Caddy**。Nginx 已有唯一的 `travel.lovenom.eu.org` HTTPS vhost 时，脚本会先用 OpenSSL 核验该站点实际配置的证书；证书主机名不匹配或缺失时，仅在该 vhost 专属该域名且 HTTP 验证站点也唯一的情况下，才通过 Certbot 修复证书。若只有唯一且专属该域名的 HTTP vhost，脚本会先核对 DNS A/AAAA 是否指向本机、确认本机 TCP 80 有监听并尝试 HTTP 连通性，再用 Certbot Nginx 验证器申请证书，随后在该站点增加 HTTPS 监听和 `/family-trip/` 路由。它不添加全站 HTTP 到 HTTPS 跳转，现有 HTTP 根路径行为保持原样。Certbot 更新证书后会通过部署钩子 reload Nginx。已有有效证书会复用；没有设置 `ACME_EMAIL` 时会明确提示 Certbot 不登记联系邮箱，因此不会收到证书到期邮件。
+
+代理变更只在该 vhost 加入带标记的规则，先备份原文件，再运行 Nginx/Caddy 配置校验，校验通过才 reload；重复运行会识别已管理的规则。不会覆盖整份代理配置、停止现有服务、改防火墙或开放 3100 公网。已有投票卷 `family-travel_votes` 会保留。Let’s Encrypt 的 HTTP-01 验证还要求云厂商防火墙和外部网络能访问 TCP 80；本机连通性预检不能代替证书机构的外部验证。
 
 如果代理在 Docker 容器中、存在多个匹配站点、找不到匹配域名、代理类型不支持或配置校验失败，脚本会停止并自动打印只读诊断结果；无需再手动运行诊断命令。它不会猜测要改哪个 vhost。脚本成功后还会请求 `https://travel.lovenom.eu.org/family-trip/api/health` 做公网健康检查。若只看到本机 app healthy，不代表公网代理已完成。
 
