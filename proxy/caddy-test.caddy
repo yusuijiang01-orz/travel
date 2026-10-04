@@ -1,0 +1,11 @@
+# Add inside the EXISTING domain {} block. Keep its TLS settings.
+# Use handle, not handle_path: retain /test/ in the upstream request.
+@travel path /test /test/*
+handle @travel {
+    request_body {
+        max_size 2KB
+    }
+    reverse_proxy 127.0.0.1:3100
+}
+# The app redirects /test to /test/ and preserves any query string.
+# Keep the existing site's routes in its existing fallback handle {}.
