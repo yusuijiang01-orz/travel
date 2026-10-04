@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f5f2e9">
+  <meta name="description" content="从永定湖雷镇出发，为五位大人与一岁宝宝准备的五个轻松旅行选择：看鹦鹉、乡村休闲、城市公园和夜市散步，一起投票决定去哪。">
+  <title>湖雷出发 · 六个人的周边小旅行</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#destination">跳到目的地攻略</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#parrot" aria-label="湖雷出发首页"><img src="/favicon.svg" alt="" width="38" height="38"><span>湖雷出发<small>一家人的周边小旅行</small></span></a>
+      <button id="open-poll" class="poll-trigger" type="button"><span class="poll-dot"></span> 一起投票 <span aria-hidden="true">↗</span></button>
+    </div>
+    <nav class="destination-nav" aria-label="五个目的地"><div id="tabs" role="tablist" aria-label="目的地攻略"></div></nav>
+  </header>
+  <main class="container">
+    <section class="trip-intro" aria-labelledby="trip-title">
+      <div><p class="eyebrow">FROM HULEI / A LITTLE FAMILY ESCAPE</p><h1 id="trip-title">六个人，一起慢慢玩。</h1><p>5 位大人 + 1 岁宝宝 · 从永定湖雷镇出发 · 自驾出游手册</p></div>
+      <div class="intro-stamp" aria-hidden="true"><span>不赶路</span><span>多停留</span><small>周边小旅行</small></div>
+    </section>
+    <section id="destination" class="destination-panel" role="tabpanel" aria-live="polite" tabindex="-1"></section>
+    <section class="baby-section" aria-labelledby="baby-title">
+      <div class="section-heading"><div><p class="eyebrow">THE LITTLE TRAVELER</p><h2 id="baby-title">宝宝舒服，全家就轻松。</h2></div><span class="mini-label">每条路线都通用</span></div>
+      <div class="baby-grid">
+        <article><span class="step-number">01</span><h3>一天一个主目的地</h3><p>把 12:30–14:30 作为午睡参考窗口，按平日作息调整。两段活动之间安排喂养、补水和换尿布，不硬赶下一站。</p></article>
+        <article><span class="step-number">02</span><h3>照护交接说清楚</h3><p>固定一位主要照护成人，再指定一位备用。有人点餐、洗手或拍照时，明确由谁看宝宝；宝宝不单独留在车内。</p></article>
+        <article><span class="step-number">03</span><h3>推车 + 背带组合</h3><p>推车走平整主路，短台阶用适龄背带或成人分组参观。遮阳帽、尿布、换尿布垫、替换衣物和熟悉食物随身。</p></article>
+      </div>
+    </section>
+    <section class="choice-note"><div><p class="eyebrow">A SMALL PLAN, A GOOD DAY</p><h2>先选喜欢的，再选当天舒服的。</h2><p>投票帮助五位大人讨论。最终路线看天气、宝宝状态和景区当天安排；全家共 6 人，宝宝由大人代为考虑。</p></div><button class="button primary open-poll" type="button">选出我们的目的地 <span aria-hidden="true">↗</span></button></section>
+    <section class="source-section" aria-labelledby="source-title"><details><summary id="source-title">信息来源与出发前确认 <span aria-hidden="true">＋</span></summary><p>资料整理日期：2026 年 10 月 4 日。车程为从湖雷镇出发的粗略规划区间，不是实时导航结果；节假日、山路、天气、停车与排队会增加时间。请以当天导航为准。</p><p>票价、儿童政策、商家营业和活动会变化，本页不把规划文件当成当天营业承诺。乡村园区先问平地短线、推车和休息位置；城市夜市先看当晚天气和营业安排。</p><ul id="source-links"></ul><p>照片来自对应报道或文旅资料页，标明实景和来源；历史照片不代表现场设施当前状态。无可靠实景照片的选项使用路线手记。</p><p>雨天备选：可以查询龙岩市博物馆当日开放、预约和推车要求；确认后再替换户外行程。雨天也可以在家休息，夜市不必勉强。</p></details></section>
+  </main>
+  <footer class="site-footer"><span>湖雷出发 · 把时间留给家人</span><span>YONGDING, FUJIAN <span aria-hidden="true">↗</span></span></footer>
+  <dialog id="poll-dialog" aria-labelledby="poll-title">
+    <div class="poll-header"><p class="eyebrow">LET’S GO TOGETHER</p><button id="close-poll" class="icon-button" type="button" aria-label="关闭投票">×</button></div>
+    <h2 id="poll-title">这次，我们去哪？</h2><p class="poll-intro">5 位大人一起选，宝宝的舒适也算进来。</p>
+    <form id="poll-form">
+      <label class="field-label" for="nickname">你的昵称</label><input id="nickname" name="nickname" autocomplete="nickname" maxlength="32" placeholder="比如：小林、妈妈、阿杰" required aria-describedby="nickname-help"><p id="nickname-help" class="field-help">2–16 个字；空格、大小写及全角差异视为同一昵称。结果不显示昵称。</p>
+      <fieldset class="mode-field"><legend>选择方式</legend><div class="mode-switch"><label><input type="radio" name="mode" value="single" checked><span>单选 · 最想去的一个</span></label><label><input type="radio" name="mode" value="multiple"><span>多选 · 选 1–3 个</span></label></div></fieldset>
+      <fieldset class="candidate-field"><legend>我想去 <span id="selection-count">已选 0 / 1</span></legend><div id="poll-options"></div></fieldset>
+      <p class="final-rule">每个昵称只能提交一次，提交后不能修改。请确认好再投票。</p><button id="submit-poll" class="button primary full-width" type="submit">提交我的选择 <span aria-hidden="true">→</span></button><p id="poll-message" role="status" aria-live="polite"></p>
+    </form>
+    <section class="results-section" aria-labelledby="results-title"><div class="results-title"><h3 id="results-title">大家的选择</h3><button id="refresh-results" class="text-button" type="button">刷新 ↻</button></div><p id="results-summary" class="field-help">正在加载大家的选择…</p><div id="results-bars"></div><p class="field-help">百分比 = 选择该目的地的人数 ÷ 已投票人数；多选时总和可超过 100%。</p></section>
+  </dialog>
+  <noscript><div class="noscript-note">本页的目的地切换与投票需要启用 JavaScript。可先查看<a href="https://www.yongding.gov.cn/xwzx/bmdt/202606/t20260623_2298284.htm">永定区政府发布的城区夜市信息</a>。</div></noscript>
+</body>
+</html>
