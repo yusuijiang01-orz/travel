@@ -1,6 +1,7 @@
 import { destinations, sources } from './destinations.js';
 
 const $ = selector => document.querySelector(selector);
+const basePath = $('meta[name="travel-base-path"]').content;
 const tabs = $('#tabs');
 const panel = $('#destination');
 const dialog = $('#poll-dialog');
@@ -82,7 +83,7 @@ async function request(path, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(path, { ...options, signal: controller.signal, cache: 'no-store' });
+    const response = await fetch(`${basePath}${path}`, { ...options, signal: controller.signal, cache: 'no-store' });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || '服务暂时不可用，请稍后重试。');
     return data;
